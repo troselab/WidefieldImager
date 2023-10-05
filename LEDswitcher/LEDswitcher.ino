@@ -10,8 +10,8 @@
 
 // Define digital lines
 #define IN_STROBE 3 // strobe signal from camera
-#define OUT_BLUE 4 // digial line to control blue LED
-#define OUT_VIOLET 5 // digital line to control violet LED
+#define OUT_BLUE 5 // digial line to control blue LED
+#define OUT_VIOLET 6 // digital line to control violet LED
 #define IN_STROBESWITCH 18 // trigger signal for strobe mode - uses strobe signal to switch between blue and violet LED
 #define IN_VIOLETSWITCH 20 // trigger signal to switch on violet LED
 #define IN_BLUESWITCH 22 // trigger signal to switch on blue LED
@@ -21,7 +21,7 @@ int blueCounter = 0; // counter for 'blue frames'
 int blueFrames = 1; // number of 'blue frames' before switching to violet. When using more than 1 blue frame, loss of LED output power due to heating should be controlled to avoid artifacts.
 int violetCounter = 0; // counter for 'violet frames'
 int violetFrames = 1; // number of 'violet frames' before switching to blue
-int deadDuration = 1; // duration of dead-time in ms.
+unsigned long deadDuration = 1; // duration of dead-time in ms.
 bool noSwitch = false; // flag for dead-time
 bool switchLight = true; // flag when expecting strobe signal. Set to false after switching LEDs and gets refreshed when strobe reads low.
 bool currentBlue = true; // flag to indicate LED state. true if blue is on, false if violet is on.

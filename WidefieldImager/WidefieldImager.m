@@ -82,7 +82,7 @@ else
     end
 end
 handles.vidObj = checkCamera(handles.vidName, handles); %get PCO video object
-
+set(handles.vidObj, 'PreviewFullBitDepth', 'off')
 % check for other cameras if PCO adaptor is unavailable.
 if isempty(handles.vidObj)
     disp('PCO camera not available. Searching for other cameras.');
@@ -102,7 +102,7 @@ end
 if ~isempty(handles.vidName)
     fprintf('Using %s as current video adapter\n',handles.vidName);
     handles.vidObj = checkCamera(handles.vidName, handles); %get non-PCO video object
-
+    set(handles.vidObj, 'PreviewFullBitDepth', 'off')
     if ~isempty(handles.vidObj)
         preview(handles.vidObj,handles.ImagePlot.Children); %start preview
         maxRange = floor(256*0.7); %limit intensity to 70% of dynamic range to avoid ceiling effects
@@ -680,7 +680,7 @@ else
             set(findall(handles.ExperimentID, '-property', 'enable'), 'enable', 'on')
             set(findall(handles.ControlPanel, '-property', 'enable'), 'enable', 'on')
             handles.FrameRate.Enable = 'on';
-            if contains(handles.vidName, 'pcocameraadaptor')
+            if contains(handles.vidName, 'pcocameraadaptor') || contains(handles.vidName, 'pmimaq_2022b')
                 handles.sBinning.Enable = 'on';
             end
             handles.driveSelect.Enable = 'on';
@@ -731,7 +731,7 @@ else
 
             if contains(handles.vidName, 'pcocameraadaptor')
                 frameRate = str2double(handles.FrameRate.String);
-            elseif contains(adaptorName, 'pmimaq_2022b') 
+            elseif contains(handles.vidName, 'pmimaq_2022b')
                 frameRate = str2double(handles.FrameRate.String);
             else
                 frameRate = str2double(handles.FrameRate.String{handles.FrameRate.Value});
@@ -1188,11 +1188,11 @@ if ~isempty(handles.vidObj)
             if strcmpi(answer,'Yes')
                 src.E2ExposureTime = 1000/str2double(handles.FrameRate.String) * 1000; %set current framerate
             end
-    elseif contains(adaptorName, 'pmimaq_2022b') 
-        frameRate = str2double(handles.FrameRate.String);
         else
             src.E2ExposureTime = 1000/str2double(handles.FrameRate.String) * 1000; %set current framerate
         end
+    elseif contains(handles.vidName, 'pmimaq_2022b')
+        src.Exposure = 1000/str2double(handles.FrameRate.String) ; %set framerate
     else
         % Adjust frame rate for non-PCO camera.
         % !! Warning !! This does not take effect with all imaq video adaptors.
@@ -1266,6 +1266,23 @@ if contains(handles.vidName, 'pcocameraadaptor')
 
     vidRes = get(handles.vidObj,'VideoResolution');
     handles.CurrentResolution.String = [num2str(vidRes(1)) ' x ' num2str(vidRes(2))]; %update current resolution indicator
+elseif contains(handles.vidName, 'pmimaq_2022b')
+    if str2double(handles.FrameRate.String) > 10 && strcmp(hObject.String(hObject.Value),'1')
+        src.Binning = "1x1";
+        src.Exposure = 100; %limit framerate to 10Hz
+        disp('FrameRate is limited to 10Hz without spatial binning.')
+        binFact = 1;
+    elseif strcmp(hObject.String(hObject.Value),'2')
+        src.Binning = "2x2";
+        binFact = 2;
+    else
+        disp('Unsupported Binning factor selected. Defaulting to 2x2')
+        src.Binning = "2x2";
+        binFact = 2;
+        vidRes = get(handles.vidObj,'VideoResolution') ;
+        handles.CurrentResolution.String = [num2str(vidRes(1)) ' x ' num2str(vidRes(2))]; %update current resolution indicator
+
+    end
 end
 
 % --- Executes during object creation, after setting all properties.
@@ -1419,6 +1436,7 @@ try
     imaqreset
     vidObj = videoinput(adaptorName); %get video object
     src = getselectedsource(vidObj);
+    set(vidObj, 'PreviewFullBitDepth', 'off')
 
     if contains(adaptorName, 'pcocameraadaptor') %check for PCO camera and set specific settings
         clockSpeed = set(src,'PCPixelclock_Hz');
@@ -1434,7 +1452,7 @@ try
             src.B1BinningHorizontal = num2str(binFact,'%02i');
             src.B2BinningVertical = num2str(binFact,'%02i');
         end
-    elseif contains(adaptorName, 'pmimaq_2022b') 
+    elseif contains(adaptorName, 'pmimaq_2022b')
         src.Binning = "2x2";
         binFact = 2;
         src.Exposure = 1000/str2double(handles.FrameRate.String) ; %set framerate
@@ -1451,7 +1469,7 @@ try
     end
 
     %setup and display live video feed in preview window
-    vidRes = get(vidObj,'VideoResolution') / binFact;
+    vidRes = get(vidObj,'VideoResolution');
     nbands = get(vidObj,'NumberOfBands');
     handles.CurrentResolution.String = [num2str(vidRes(1)) ' x ' num2str(vidRes(2))]; %update current resolution indicator
     %     imshow(zeros(vidRes(2),vidRes(1),nbands),[],'parent',handles.ImagePlot,'XData',[0 1],'YData',[0 1]); %create image object for preview
